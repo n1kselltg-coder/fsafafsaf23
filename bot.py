@@ -220,25 +220,33 @@ async def handle_link_violation(message: types.Message, username: str, user_full
         else:
             user_mention = user_fullname
         
-        # Мутим пользователя (ограничиваем возможность писать)
-        mute_permissions = ChatPermissions(
-            can_send_messages=False,
-            can_send_media_messages=False,
-            can_send_other_messages=False,
-            can_add_web_page_previews=False
-        )
+        # Устанавливаем время мута на 3 часа
+        until_date = datetime.now() + timedelta(hours=3)
         
+        # Мутим пользователя на 3 часа
         await bot.restrict_chat_member(
             chat_id=message.chat.id,
             user_id=user_id,
-            permissions=mute_permissions
+            permissions=ChatPermissions(
+                can_send_messages=False,
+                can_send_media_messages=False,
+                can_send_other_messages=False,
+                can_add_web_page_previews=False
+            ),
+            until_date=until_date,
+            reason="ссылка"
         )
         
-        logger.info(f"🔇 Пользователь @{username} (ID: {user_id}) замучен")
+        logger.info(f"🔇 Пользователь @{username} (ID: {user_id}) замучен на 3 часа. Причина: ссылка")
+        
+        # Форматируем время окончания мута
+        mute_end_time = until_date.strftime("%H:%M:%S")
         
         # Отправляем сообщение о муте с кнопкой снятия
         await message.answer(
-            f"{user_mention} был замучен",
+            f"{user_mention} был замучен\n"
+            f"⏰ До: {mute_end_time}\n"
+            f"📝 Причина: ссылка",
             reply_markup=get_unmute_keyboard(user_id)
         )
         
