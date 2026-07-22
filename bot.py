@@ -59,14 +59,29 @@ async def start_command(message: types.Message):
 
 @dp.message(F.chat.id == CHAT_ID)
 async def check_subscription(message: types.Message):
-    # Пропускаем системные сообщения и сообщения от каналов/ботов
-    if message.from_user is None or message.from_user.is_bot:
-        logger.info(f"⏭️ Пропускаем системное сообщение или сообщение от бота/канала")
+    # Пропускаем системные сообщения
+    if message.from_user is None:
+        logger.info(f"⏭️ Пропускаем системное сообщение (from_user is None)")
         return
     
-    # Дополнительная проверка на sender_chat (сообщения от каналов)
+    # Пропускаем сообщения от ботов
+    if message.from_user.is_bot:
+        logger.info(f"⏭️ Пропускаем сообщение от бота: {message.from_user.username}")
+        return
+    
+    # Пропускаем сообщения от каналов (sender_chat)
     if message.sender_chat is not None:
-        logger.info(f"⏭️ Пропускаем сообщение от канала: {message.sender_chat.title}")
+        logger.info(f"⏭️ Пропускаем сообщение от канала: {message.sender_chat.title} (ID: {message.sender_chat.id})")
+        return
+    
+    # Дополнительная проверка: пропускаем forward_from_chat (пересланные из канала)
+    if message.forward_from_chat is not None:
+        logger.info(f"⏭️ Пропускаем пересланное сообщение из канала: {message.forward_from_chat.title}")
+        return
+    
+    # Дополнительная проверка: is_automatic_forward (автоматическая пересылка из канала в комментарии)
+    if message.is_automatic_forward:
+        logger.info(f"⏭️ Пропускаем автоматически пересланное сообщение из канала")
         return
     
     user_id = message.from_user.id
@@ -88,7 +103,6 @@ async def check_subscription(message: types.Message):
             
     except (TelegramForbiddenError, TelegramBadRequest) as e:
         logger.error(f"⚠️ Ошибка доступа для @{username} (ID: {user_id}): {e}")
-        # Для ошибок доступа тоже удаляем сообщение
         await delete_and_warn(message, username, user_id)
     except Exception as e:
         logger.error(f"💥 Неизвестная ошибка для @{username} (ID: {user_id}): {e}")
