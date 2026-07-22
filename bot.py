@@ -72,29 +72,35 @@ async def check_subscription(message: types.Message):
         # Если пользователь не подписан (left или kicked)
         if member.status in ("left", "kicked"):
             logger.warning(f"❌ @{username} (ID: {user_id}) не подписан на канал. Статус: {member.status}")
-            await delete_and_warn(message, username, user_id)
+            await delete_and_warn(message, username, user_fullname, user_id)
         else:
             logger.info(f"✅ @{username} (ID: {user_id}) подписан на канал. Статус: {member.status}")
             
     except (TelegramForbiddenError, TelegramBadRequest) as e:
         logger.error(f"⚠️ Ошибка доступа для @{username} (ID: {user_id}): {e}")
-        await delete_and_warn(message, username, user_id)
+        await delete_and_warn(message, username, user_fullname, user_id)
     except Exception as e:
         logger.error(f"💥 Неизвестная ошибка для @{username} (ID: {user_id}): {e}")
-        await delete_and_warn(message, username, user_id)
+        await delete_and_warn(message, username, user_fullname, user_id)
 
-async def delete_and_warn(message: types.Message, username: str, user_id: int):
+async def delete_and_warn(message: types.Message, username: str, user_fullname: str, user_id: int):
     try:
         # Удаляем сообщение
         await message.delete()
         logger.info(f"🗑️ Сообщение от @{username} (ID: {user_id}) успешно удалено")
         
-        # Отправляем предупреждение с кнопкой
+        # Определяем как показывать пользователя (если есть username - используем его, иначе имя)
+        if username != "без username":
+            user_mention = f"@{username}"
+        else:
+            user_mention = user_fullname
+        
+        # Отправляем предупреждение с упоминанием пользователя
         await message.answer(
-            "подпишитесь на Mory Blog чтобы продолжить общаться в чате",
+            f"{user_mention}, подпишитесь на Mory Blog чтобы продолжить общаться в чате",
             reply_markup=get_warning_keyboard()
         )
-        logger.info(f"📢 Предупреждение с кнопкой отправлено для @{username} (ID: {user_id})")
+        logger.info(f"📢 Предупреждение отправлено для {user_mention} (ID: {user_id})")
         
     except Exception as e:
         logger.error(f"❌ Ошибка при удалении/отправке для @{username} (ID: {user_id}): {e}")
