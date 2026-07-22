@@ -59,6 +59,16 @@ async def start_command(message: types.Message):
 
 @dp.message(F.chat.id == CHAT_ID)
 async def check_subscription(message: types.Message):
+    # Пропускаем системные сообщения и сообщения от каналов/ботов
+    if message.from_user is None or message.from_user.is_bot:
+        logger.info(f"⏭️ Пропускаем системное сообщение или сообщение от бота/канала")
+        return
+    
+    # Дополнительная проверка на sender_chat (сообщения от каналов)
+    if message.sender_chat is not None:
+        logger.info(f"⏭️ Пропускаем сообщение от канала: {message.sender_chat.title}")
+        return
+    
     user_id = message.from_user.id
     username = message.from_user.username or "без username"
     user_fullname = message.from_user.full_name
@@ -78,10 +88,10 @@ async def check_subscription(message: types.Message):
             
     except (TelegramForbiddenError, TelegramBadRequest) as e:
         logger.error(f"⚠️ Ошибка доступа для @{username} (ID: {user_id}): {e}")
+        # Для ошибок доступа тоже удаляем сообщение
         await delete_and_warn(message, username, user_id)
     except Exception as e:
         logger.error(f"💥 Неизвестная ошибка для @{username} (ID: {user_id}): {e}")
-        await delete_and_warn(message, username, user_id)
 
 async def delete_and_warn(message: types.Message, username: str, user_id: int):
     try:
